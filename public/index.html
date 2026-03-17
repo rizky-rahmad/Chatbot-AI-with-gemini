@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gemini AI Chatbot</title>
+  <!-- Menggunakan Tailwind CSS untuk UI yang modern dan responsif -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Kustomisasi scrollbar agar lebih rapi */
+    #chat-box::-webkit-scrollbar {
+      width: 6px;
+    }
+    #chat-box::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #chat-box::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 10px;
+    }
+    /* Animasi munculnya pesan */
+    .message-enter {
+      animation: fadeIn 0.3s ease-out forwards;
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans antialiased h-screen flex items-center justify-center p-4">
+
+  <!-- Container Utama Aplikasi Chat -->
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[600px] max-h-full border border-gray-200">
+    
+    <!-- Header Chat -->
+    <header class="bg-blue-600 text-white p-4 shadow-md flex items-center justify-between z-10">
+      <div class="flex items-center gap-3">
+        <!-- Ikon Bot -->
+        <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-inner">
+          <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight">Gemini AI</h1>
+          <p class="text-xs text-blue-100 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span> Online
+          </p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Area Chat -->
+    <div id="chat-box" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-gray-50">
+      <!-- Pesan pembuka default -->
+      <div class="flex w-full justify-start message-enter">
+        <div class="bg-white text-gray-800 border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-2 max-w-[80%] shadow-sm text-sm">
+          Halo! Ada yang bisa saya bantu hari ini?
+        </div>
+      </div>
+    </div>
+
+    <!-- Area Input Pesan -->
+    <div class="p-3 bg-white border-t border-gray-100">
+      <form id="chat-form" class="flex items-center gap-2 relative">
+        <input 
+          type="text" 
+          id="user-input" 
+          class="flex-1 bg-gray-100 text-gray-800 rounded-full pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm border border-transparent" 
+          placeholder="Ketik pesan Anda..." 
+          autocomplete="off" 
+          required 
+        />
+        <button 
+          type="submit" 
+          class="absolute right-1 w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-colors shadow-md"
+          aria-label="Kirim"
+        >
+          <svg class="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+          </svg>
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const chatForm = document.getElementById('chat-form');
+      const chatBox = document.getElementById('chat-box');
+      const userInput = document.getElementById('user-input');
+     
+      chatForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+       
+        const userMessage = userInput.value.trim();
+        if (!userMessage) return;
+       
+        // Tambahkan pesan user
+        addMessage('user', userMessage);
+        userInput.value = '';
+       
+        // Tambahkan pesan "thinking" dari bot
+        const thinkingBubble = addMessage('bot', 'Berpikir...');
+       
+        try {
+          // Logika API tetap dipertahankan sesuai aslinya
+          const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ conversation: [{ role: 'user', text: userMessage }] })
+          });
+         
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+         
+          const data = await response.json();
+         
+          if (data.result) {
+            thinkingBubble.textContent = data.result;
+          } else {
+            thinkingBubble.textContent = 'Maaf, tidak ada respon yang diterima.';
+          }
+         
+        } catch (error) {
+          console.error('Failed to get response from server:', error);
+          thinkingBubble.textContent = 'Gagal terhubung ke server.';
+        }
+      });
+     
+      function addMessage(sender, message) {
+        // Wrapper flexbox untuk memisahkan baris (menggantikan float yang bermasalah)
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('flex', 'w-full', 'message-enter');
+        
+        // Atur posisi: Kanan untuk User, Kiri untuk Bot
+        if (sender === 'user') {
+          wrapper.classList.add('justify-end');
+        } else {
+          wrapper.classList.add('justify-start');
+        }
+     
+        // Elemen bubble chat
+        const bubble = document.createElement('div');
+        bubble.classList.add('px-4', 'py-2', 'max-w-[80%]', 'shadow-sm', 'text-sm', 'break-words');
+        
+        // Styling spesifik berdasarkan pengirim
+        if (sender === 'user') {
+          // Biru dengan ekor di kanan bawah
+          bubble.classList.add('bg-blue-600', 'text-white', 'rounded-2xl', 'rounded-br-sm');
+        } else {
+          // Putih/Abu terang dengan ekor di kiri atas
+          bubble.classList.add('bg-white', 'text-gray-800', 'border', 'border-gray-200', 'rounded-2xl', 'rounded-tl-sm');
+        }
+     
+        bubble.textContent = message;
+        wrapper.appendChild(bubble);
+        chatBox.appendChild(wrapper);
+     
+        scrollToBottom();
+     
+        return bubble; 
+      }
+     
+      function scrollToBottom() {
+        // Scroll yang lebih halus
+        chatBox.scrollTo({
+          top: chatBox.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+    });
+  </script>
+</body>
+</html>
